@@ -1594,18 +1594,30 @@ namespace ts {
         }
 
         // Parses a list of elements
-        function parseList<T extends Node>(kind: ParsingContext, parseElement: () => T): NodeArray<T> {
+        function parseList<T extends Node>(kind: ParsingContext, parseElement: () => T, listElementOptionalPrefix?: SyntaxKind): NodeArray<T> {
             const saveParsingContext = parsingContext;
             parsingContext |= 1 << kind;
             const list = [];
             const listPos = getNodePos();
+
+            if (listElementOptionalPrefix) {
+                parseOptional(listElementOptionalPrefix);
+            }
 
             while (!isListTerminator(kind)) {
                 if (isListElement(kind, /*inErrorRecovery*/ false)) {
                     const element = parseListElement(kind, parseElement);
                     list.push(element);
 
+                    if (listElementOptionalPrefix) {
+                        parseOptional(listElementOptionalPrefix);
+                    }
+
                     continue;
+                }
+
+                if (listElementOptionalPrefix) {
+                    parseOptional(listElementOptionalPrefix);
                 }
 
                 if (abortParsingListOrMoveToNextToken(kind)) {
@@ -2595,7 +2607,7 @@ namespace ts {
         function parseObjectTypeMembers(): NodeArray<TypeElement> {
             let members: NodeArray<TypeElement>;
             if (parseExpected(SyntaxKind.OpenBraceToken)) {
-                members = parseList(ParsingContext.TypeMembers, parseTypeMember);
+                members = parseList(ParsingContext.TypeMembers, parseTypeMember, SyntaxKind.AsteriskToken);
                 parseExpected(SyntaxKind.CloseBraceToken);
             }
             else {
