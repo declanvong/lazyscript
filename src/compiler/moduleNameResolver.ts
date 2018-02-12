@@ -233,7 +233,7 @@ namespace ts {
                 return forEach(typeRoots, typeRoot => {
                     const candidate = combinePaths(typeRoot, typeReferenceDirectiveName);
                     const candidateDirectory = getDirectoryPath(candidate);
-                    const directoryExists = directoryProbablyExists(candidateDirectory, host);
+                    const directoryExists = directoryProbablyExists(candidateDirectory, host, options.baseUrl);
                     if (!directoryExists && traceEnabled) {
                         trace(host, Diagnostics.Directory_0_does_not_exist_skipping_all_lookups_in_it, candidateDirectory);
                     }
@@ -587,7 +587,10 @@ namespace ts {
             trace(state.host, Diagnostics.rootDirs_option_is_set_using_it_to_resolve_relative_module_name_0, moduleName);
         }
 
-        const candidate = normalizePath(combinePaths(containingDirectory, moduleName));
+        let candidate = normalizePath(combinePaths(containingDirectory, moduleName));
+        if (candidate.charAt(0) === directorySeparator && state.compilerOptions.baseUrl) {
+            candidate = state.compilerOptions.baseUrl + candidate;
+        }
 
         let matchedRootDir: string;
         let matchedNormalizedPrefix: string;
@@ -622,7 +625,7 @@ namespace ts {
             if (state.traceEnabled) {
                 trace(state.host, Diagnostics.Loading_0_from_the_root_dir_1_candidate_location_2, suffix, matchedNormalizedPrefix, candidate);
             }
-            const resolvedFileName = loader(extensions, candidate, failedLookupLocations, !directoryProbablyExists(containingDirectory, state.host), state);
+            const resolvedFileName = loader(extensions, candidate, failedLookupLocations, !directoryProbablyExists(containingDirectory, state.host, state.compilerOptions.baseUrl), state);
             if (resolvedFileName) {
                 return resolvedFileName;
             }
@@ -641,7 +644,7 @@ namespace ts {
                     trace(state.host, Diagnostics.Loading_0_from_the_root_dir_1_candidate_location_2, suffix, rootDir, candidate);
                 }
                 const baseDirectory = getDirectoryPath(candidate);
-                const resolvedFileName = loader(extensions, candidate, failedLookupLocations, !directoryProbablyExists(baseDirectory, state.host), state);
+                const resolvedFileName = loader(extensions, candidate, failedLookupLocations, !directoryProbablyExists(baseDirectory, state.host, state.compilerOptions.baseUrl), state);
                 if (resolvedFileName) {
                     return resolvedFileName;
                 }
@@ -691,7 +694,7 @@ namespace ts {
                     }
                 }
 
-                return loader(extensions, candidate, failedLookupLocations, !directoryProbablyExists(getDirectoryPath(candidate), state.host), state);
+                return loader(extensions, candidate, failedLookupLocations, !directoryProbablyExists(getDirectoryPath(candidate), state.host, state.compilerOptions.baseUrl), state);
             });
         }
         else {
@@ -701,7 +704,7 @@ namespace ts {
                 trace(state.host, Diagnostics.Resolving_module_name_0_relative_to_base_url_1_2, moduleName, state.compilerOptions.baseUrl, candidate);
             }
 
-            return loader(extensions, candidate, failedLookupLocations, !directoryProbablyExists(getDirectoryPath(candidate), state.host), state);
+            return loader(extensions, candidate, failedLookupLocations, !directoryProbablyExists(getDirectoryPath(candidate), state.host, state.compilerOptions.baseUrl), state);
         }
     }
 
@@ -792,7 +795,7 @@ namespace ts {
         if (!pathEndsWithDirectorySeparator(candidate)) {
             if (!onlyRecordFailures) {
                 const parentOfCandidate = getDirectoryPath(candidate);
-                if (!directoryProbablyExists(parentOfCandidate, state.host)) {
+                if (!directoryProbablyExists(parentOfCandidate, state.host, state.compilerOptions.baseUrl)) {
                     if (state.traceEnabled) {
                         trace(state.host, Diagnostics.Directory_0_does_not_exist_skipping_all_lookups_in_it, parentOfCandidate);
                     }
@@ -807,7 +810,7 @@ namespace ts {
             }
         }
         if (!onlyRecordFailures) {
-            const candidateExists = directoryProbablyExists(candidate, state.host);
+            const candidateExists = directoryProbablyExists(candidate, state.host, state.compilerOptions.baseUrl);
             if (!candidateExists) {
                 if (state.traceEnabled) {
                     trace(state.host, Diagnostics.Directory_0_does_not_exist_skipping_all_lookups_in_it, candidate);
@@ -867,9 +870,18 @@ namespace ts {
     }
 
     /* @internal */
-    export function directoryProbablyExists(directoryName: string, host: { directoryExists?: (directoryName: string) => boolean }): boolean {
+    export function directoryProbablyExists(directoryName: string, host: { directoryExists?: (directoryName: string) => boolean }, baseUrl: string): boolean {
         // if host does not support 'directoryExists' assume that directory will exist
-        return !host.directoryExists || host.directoryExists(directoryName);
+        return !host.directoryExists || host.directoryExists(directoryName) || host.directoryExists(getBaseUrlDirectory(directoryName, baseUrl));
+    }
+
+    function getBaseUrlDirectory(path: string, baseUrl: string) {
+        if (path.charAt(0) === directorySeparator) {
+            path = baseUrl + path;
+        } else {
+            path = baseUrl + directorySeparator + path;
+        }
+        return path;
     }
 
     function loadModuleFromFileNoPackageId(extensions: Extensions, candidate: string, failedLookupLocations: Push<string>, onlyRecordFailures: boolean, state: ModuleResolutionState): Resolved {
@@ -887,6 +899,12 @@ namespace ts {
             return resolvedByAddingExtension;
         }
 
+        // Try searching from baseUrl instead of root
+        const resolvedByPrefixingBaseUrl = tryPrefixingBaseUrl(candidate, extensions, failedLookupLocations, onlyRecordFailures, state);
+        if (resolvedByPrefixingBaseUrl) {
+            return resolvedByPrefixingBaseUrl;
+        }
+
         // If that didn't work, try stripping a ".js" or ".jsx" extension and replacing it with a TypeScript one;
         // e.g. "./foo.js" can be matched by "./foo.ts" or "./foo.d.ts"
         if (hasJavaScriptFileExtension(candidate)) {
@@ -899,13 +917,20 @@ namespace ts {
         }
     }
 
+    function tryPrefixingBaseUrl(candidate: string, extensions: Extensions, failedLookupLocations: Push<string>, onlyRecordFailures: boolean, state: ModuleResolutionState): PathAndExtension | undefined {
+        if (state.compilerOptions.baseUrl) {
+            const candidatePath = getBaseUrlDirectory(candidate, state.compilerOptions.baseUrl);
+            return tryAddingExtensions(candidatePath, extensions, failedLookupLocations, onlyRecordFailures, state);
+        }
+    }
+
     /** Try to return an existing file that adds one of the `extensions` to `candidate`. */
     function tryAddingExtensions(candidate: string, extensions: Extensions, failedLookupLocations: Push<string>, onlyRecordFailures: boolean, state: ModuleResolutionState): PathAndExtension | undefined {
         if (!onlyRecordFailures) {
             // check if containing folder exists - if it doesn't then just record failures for all supported extensions without disk probing
             const directory = getDirectoryPath(candidate);
             if (directory) {
-                onlyRecordFailures = !directoryProbablyExists(directory, state.host);
+                onlyRecordFailures = !directoryProbablyExists(directory, state.host, state.compilerOptions.baseUrl);
             }
         }
 
@@ -955,7 +980,7 @@ namespace ts {
         if (fromPackageJson) {
             return fromPackageJson;
         }
-        const directoryExists = !onlyRecordFailures && directoryProbablyExists(candidate, state.host);
+        const directoryExists = !onlyRecordFailures && directoryProbablyExists(candidate, state.host, state.compilerOptions.baseUrl);
         return loadModuleFromFile(extensions, combinePaths(candidate, "index"), failedLookupLocations, !directoryExists, state);
     }
 
@@ -967,7 +992,7 @@ namespace ts {
         state: ModuleResolutionState,
     ): { found: boolean, packageJsonContent: PackageJsonPathFields | undefined, packageId: PackageId | undefined } {
         const { host, traceEnabled } = state;
-        const directoryExists = !onlyRecordFailures && directoryProbablyExists(nodeModuleDirectory, host);
+        const directoryExists = !onlyRecordFailures && directoryProbablyExists(nodeModuleDirectory, host, state.compilerOptions.baseUrl);
         const packageJsonPath = pathToPackageJson(nodeModuleDirectory);
         if (directoryExists && host.fileExists(packageJsonPath)) {
             const packageJsonContent = readJson(packageJsonPath, host);
@@ -1018,7 +1043,7 @@ namespace ts {
             return undefined;
         }
 
-        const onlyRecordFailures = !directoryProbablyExists(getDirectoryPath(file), state.host);
+        const onlyRecordFailures = !directoryProbablyExists(getDirectoryPath(file), state.host, state.compilerOptions.baseUrl);
         const fromFile = tryFile(file, failedLookupLocations, onlyRecordFailures, state);
         if (fromFile) {
             const resolved = fromFile && resolvedIfExtensionMatches(extensions, fromFile);
@@ -1118,7 +1143,7 @@ namespace ts {
     /** Load a module from a single node_modules directory, but not from any ancestors' node_modules directories. */
     function loadModuleFromNodeModulesOneLevel(extensions: Extensions, moduleName: string, directory: string, failedLookupLocations: Push<string>, state: ModuleResolutionState, typesOnly = false): Resolved | undefined {
         const nodeModulesFolder = combinePaths(directory, "node_modules");
-        const nodeModulesFolderExists = directoryProbablyExists(nodeModulesFolder, state.host);
+        const nodeModulesFolderExists = directoryProbablyExists(nodeModulesFolder, state.host, state.compilerOptions.baseUrl);
         if (!nodeModulesFolderExists && state.traceEnabled) {
             trace(state.host, Diagnostics.Directory_0_does_not_exist_skipping_all_lookups_in_it, nodeModulesFolder);
         }
@@ -1130,7 +1155,7 @@ namespace ts {
         if (extensions !== Extensions.JavaScript) {
             const nodeModulesAtTypes = combinePaths(nodeModulesFolder, "@types");
             let nodeModulesAtTypesExists = nodeModulesFolderExists;
-            if (nodeModulesFolderExists && !directoryProbablyExists(nodeModulesAtTypes, state.host)) {
+            if (nodeModulesFolderExists && !directoryProbablyExists(nodeModulesAtTypes, state.host, state.compilerOptions.baseUrl)) {
                 if (state.traceEnabled) {
                     trace(state.host, Diagnostics.Directory_0_does_not_exist_skipping_all_lookups_in_it, nodeModulesAtTypes);
                 }

@@ -1274,7 +1274,7 @@ namespace ts {
                 },
                 realpath: host.realpath && (path => host.realpath(path)),
                 directoryExists: directoryName => {
-                    return directoryProbablyExists(directoryName, host);
+                    return directoryProbablyExists(directoryName, host, newSettings.baseUrl);
                 },
                 getDirectories: path => {
                     return host.getDirectories ? host.getDirectories(path) : [];

@@ -26,7 +26,7 @@ namespace ts.Completions.PathCompletions {
             }
             else {
                 return getCompletionEntriesForDirectoryFragment(
-                    literalValue, scriptDirectory, extensions, /*includeExtensions*/ false, span, host, scriptPath);
+                    literalValue, scriptDirectory, extensions, /*includeExtensions*/ false, span, compilerOptions, host, scriptPath);
             }
         }
         else {
@@ -62,7 +62,7 @@ namespace ts.Completions.PathCompletions {
         const result: PathCompletion[] = [];
 
         for (const baseDirectory of baseDirectories) {
-            getCompletionEntriesForDirectoryFragment(fragment, baseDirectory, extensions, includeExtensions, span, host, exclude, result);
+            getCompletionEntriesForDirectoryFragment(fragment, baseDirectory, extensions, includeExtensions, span, compilerOptions, host, exclude, result);
         }
 
         return result;
@@ -71,7 +71,7 @@ namespace ts.Completions.PathCompletions {
     /**
      * Given a path ending at a directory, gets the completions for the path, and filters for those entries containing the basename.
      */
-    function getCompletionEntriesForDirectoryFragment(fragment: string, scriptPath: string, extensions: ReadonlyArray<string>, includeExtensions: boolean, span: TextSpan, host: LanguageServiceHost, exclude?: string, result: PathCompletion[] = []): PathCompletion[] {
+    function getCompletionEntriesForDirectoryFragment(fragment: string, scriptPath: string, extensions: ReadonlyArray<string>, includeExtensions: boolean, span: TextSpan, compilerOptions: CompilerOptions, host: LanguageServiceHost, exclude?: string, result: PathCompletion[] = []): PathCompletion[] {
         if (fragment === undefined) {
             fragment = "";
         }
@@ -94,7 +94,7 @@ namespace ts.Completions.PathCompletions {
         const baseDirectory = getDirectoryPath(absolutePath);
         const ignoreCase = !(host.useCaseSensitiveFileNames && host.useCaseSensitiveFileNames());
 
-        if (tryDirectoryExists(host, baseDirectory)) {
+        if (tryDirectoryExists(host, baseDirectory, compilerOptions.baseUrl)) {
             // Enumerate the available files if possible
             const files = tryReadDirectory(host, baseDirectory, extensions, /*exclude*/ undefined, /*include*/ ["./*"]);
 
@@ -155,7 +155,7 @@ namespace ts.Completions.PathCompletions {
         if (baseUrl) {
             const projectDir = compilerOptions.project || host.getCurrentDirectory();
             const absolute = isRootedDiskPath(baseUrl) ? baseUrl : combinePaths(projectDir, baseUrl);
-            getCompletionEntriesForDirectoryFragment(fragment, normalizePath(absolute), fileExtensions, /*includeExtensions*/ false, span, host, /*exclude*/ undefined, result);
+            getCompletionEntriesForDirectoryFragment(fragment, normalizePath(absolute), fileExtensions, /*includeExtensions*/ false, span, compilerOptions, host, /*exclude*/ undefined, result);
 
             for (const path in paths) {
                 const patterns = paths[path];
@@ -174,7 +174,7 @@ namespace ts.Completions.PathCompletions {
             forEachAncestorDirectory(scriptPath, ancestor => {
                 const nodeModules = combinePaths(ancestor, "node_modules");
                 if (host.directoryExists(nodeModules)) {
-                    getCompletionEntriesForDirectoryFragment(fragment, nodeModules, fileExtensions, /*includeExtensions*/ false, span, host, /*exclude*/ undefined, result);
+                    getCompletionEntriesForDirectoryFragment(fragment, nodeModules, fileExtensions, /*includeExtensions*/ false, span, compilerOptions, host, /*exclude*/ undefined, result);
                 }
             });
         }
@@ -315,7 +315,7 @@ namespace ts.Completions.PathCompletions {
             case "path": {
                 // Give completions for a relative path
                 const span = getDirectoryFragmentTextSpan(toComplete, range.pos + prefix.length);
-                return getCompletionEntriesForDirectoryFragment(toComplete, scriptPath, getSupportedExtensions(compilerOptions), /*includeExtensions*/ true, span, host, sourceFile.path);
+                return getCompletionEntriesForDirectoryFragment(toComplete, scriptPath, getSupportedExtensions(compilerOptions), /*includeExtensions*/ true, span, compilerOptions, host, sourceFile.path);
             }
             case "types": {
                 // Give completions based on the typings available
@@ -360,7 +360,7 @@ namespace ts.Completions.PathCompletions {
 
         function getCompletionEntriesFromDirectories(directory: string) {
             Debug.assert(!!host.getDirectories);
-            if (tryDirectoryExists(host, directory)) {
+            if (tryDirectoryExists(host, directory, options.baseUrl)) {
                 const directories = tryGetDirectories(host, directory);
                 if (directories) {
                     for (let typeDirectory of directories) {
@@ -508,9 +508,9 @@ namespace ts.Completions.PathCompletions {
         return tryIOAndConsumeErrors(host, host.fileExists, path);
     }
 
-    function tryDirectoryExists(host: LanguageServiceHost, path: string): boolean {
+    function tryDirectoryExists(host: LanguageServiceHost, path: string, baseUrl: string): boolean {
         try {
-            return directoryProbablyExists(path, host);
+            return directoryProbablyExists(path, host, baseUrl);
         }
         catch { /*ignore*/ }
         return undefined;
