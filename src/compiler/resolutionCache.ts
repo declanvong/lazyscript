@@ -96,7 +96,7 @@ namespace ts {
          * This helps in not having to comb through all resolutions when files are added/removed
          * Note that .d.ts file also has .d.ts extension hence will be part of default extensions
          */
-        const failedLookupDefaultExtensions = [Extension.Ts, Extension.Tsx, Extension.Js, Extension.Jsx, Extension.Json];
+        const failedLookupDefaultExtensions = [Extension.Ts, Extension.Tsx, Extension.Js, Extension.Es6, Extension.Jsx, Extension.Json];
         const customFailedLookupPaths = createMap<number>();
 
         const directoryWatchesOfFailedLookups = createMap<DirectoryWatchesOfFailedLookup>();

@@ -2411,6 +2411,7 @@ namespace ts {
             case Extension.Jsx:
                 return needJsx() || needAllowJs();
             case Extension.Js:
+            case Extension.Es6:
                 return needAllowJs();
         }
 

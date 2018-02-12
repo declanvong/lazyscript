@@ -915,7 +915,7 @@ namespace ts {
             case Extensions.TypeScript:
                 return tryExtension(Extension.Ts) || tryExtension(Extension.Tsx) || tryExtension(Extension.Dts);
             case Extensions.JavaScript:
-                return tryExtension(Extension.Js) || tryExtension(Extension.Jsx);
+                return tryExtension(Extension.Js) || tryExtension(Extension.Es6) || tryExtension(Extension.Jsx);
         }
 
         function tryExtension(ext: Extension): PathAndExtension | undefined {
@@ -1051,7 +1051,7 @@ namespace ts {
     function extensionIsOk(extensions: Extensions, extension: Extension): boolean {
         switch (extensions) {
             case Extensions.JavaScript:
-                return extension === Extension.Js || extension === Extension.Jsx;
+                return extension === Extension.Js || extension === Extension.Es6 || extension === Extension.Jsx;
             case Extensions.TypeScript:
                 return extension === Extension.Ts || extension === Extension.Tsx || extension === Extension.Dts;
             case Extensions.DtsOnly:

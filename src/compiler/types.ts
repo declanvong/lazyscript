@@ -4468,6 +4468,7 @@ namespace ts {
         Tsx = ".tsx",
         Dts = ".d.ts",
         Js = ".js",
+        Es6 = ".es6",
         Jsx = ".jsx",
         Json = ".json"
     }
