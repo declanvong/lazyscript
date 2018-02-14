@@ -3,7 +3,9 @@
     "compilerOptions": {
         "removeComments": true,
         "outFile": "../../built/local/tsc.js",
-        "declaration": true
+        "declaration": true,
+        "inlineSourceMap": true,
+        "sourceRoot": "."
     },
     "files": [
         "core.ts",

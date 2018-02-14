@@ -10,7 +10,7 @@
         "pretty": true,
         "preserveConstEnums": true,
         "stripInternal": true,
-        "sourceMap": true,
+        "inlineSourceMap": true,
         "target": "es5",
         "newLine": "lf",
         "types": []

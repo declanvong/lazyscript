@@ -442,10 +442,10 @@ gulp.task(builtLocalCompiler, /*help*/ false, [servicesFile], () => {
     const localCompilerProject = tsc.createProject("src/compiler/tsconfig.json", getCompilerSettings({}, /*useBuiltCompiler*/ true));
     return localCompilerProject.src()
         .pipe(newer(builtLocalCompiler))
-        .pipe(sourcemaps.init())
+        .pipe(sourcemaps.init({ loadMaps: true }))
         .pipe(localCompilerProject())
         .pipe(prependCopyright())
-        .pipe(sourcemaps.write("."))
+        .pipe(sourcemaps.write({ sourceRoot: '../../src/compiler' }))
         .pipe(gulp.dest("src/compiler"));
 });
 
