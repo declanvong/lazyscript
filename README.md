@@ -4,5 +4,5 @@
  - Fixed type parser on JSDoc object literal types that spanned multiple lines
   
 ## Todo
- - Mark JSDoc types that have (?T|undefined) as optional parameters
- - Implement templated classes via JSDoc (currently, @template can only be used for functions)
+ - Mark JSDoc types that have type `(?T|undefined)` as optional parameters
+ - Implement templated classes via JSDoc (currently, `@template` can only be used for functions)
