@@ -8,3 +8,4 @@
  - Mark JSDoc types that have type `(?T|undefined)` as optional parameters (or mark as warning only)
  - Allow `@return` statements on constructors (or mark as warning only)
  - Allow empty bodies with no return statements in classes marked as interfaces
+ - (Bug) Method generic type parameter trivia does not display the outer type but instead the const value
