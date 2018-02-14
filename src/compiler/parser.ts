@@ -5681,11 +5681,31 @@ namespace ts {
             return <ClassDeclaration>parseClassDeclarationOrExpression(node, SyntaxKind.ClassDeclaration);
         }
 
+        function applyJSDocTypeParameters(node: ClassLikeDeclaration): NodeArray<TypeParameterDeclaration> | undefined {
+            if (node.jsDoc) {
+                return undefined;
+            }
+            for (const jsDoc of node.jsDoc) {
+                if (!jsDoc.tags) {
+                    continue;
+                }
+
+                const templateTags = jsDoc.tags.filter(tag => isJSDocTemplateTag(tag));
+                if (templateTags.length) {
+                    // Assume they only have a single `@template` tag
+                    return (templateTags[0] as JSDocTemplateTag).typeParameters;
+                }
+            }
+        }
+
         function parseClassDeclarationOrExpression(node: ClassLikeDeclaration, kind: ClassLikeDeclaration["kind"]): ClassLikeDeclaration {
             node.kind = kind;
             parseExpected(SyntaxKind.ClassKeyword);
             node.name = parseNameOfClassDeclarationOrExpression();
             node.typeParameters = parseTypeParameters();
+            if (!node.typeParameters) {
+                node.typeParameters = applyJSDocTypeParameters(node);
+            }
             node.heritageClauses = parseHeritageClauses();
 
             if (parseExpected(SyntaxKind.OpenBraceToken)) {

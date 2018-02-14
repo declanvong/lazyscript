@@ -1418,7 +1418,6 @@ namespace ts {
                     }
 
                     switch (parent.kind) {
-                        case SyntaxKind.ClassDeclaration:
                         case SyntaxKind.MethodDeclaration:
                         case SyntaxKind.MethodSignature:
                         case SyntaxKind.Constructor:

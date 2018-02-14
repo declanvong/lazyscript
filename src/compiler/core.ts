@@ -1581,7 +1581,7 @@ namespace ts {
     export function getLocaleSpecificMessage(message: DiagnosticMessage) {
         return localizedDiagnosticMessages && localizedDiagnosticMessages[message.key] || message.message;
     }
-
+    
     export function createFileDiagnostic(file: SourceFile, start: number, length: number, message: DiagnosticMessage, ...args: (string | number)[]): Diagnostic;
     export function createFileDiagnostic(file: SourceFile, start: number, length: number, message: DiagnosticMessage): Diagnostic {
         Debug.assertGreaterThanOrEqual(start, 0);
