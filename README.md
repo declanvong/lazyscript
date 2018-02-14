@@ -10,3 +10,4 @@
  - Allow empty bodies with no return statements in classes marked as interfaces
  - (Bug) Method generic type parameter trivia does not display the outer type but instead the const value
  - Allow `@typedef` tags with no identifier (identifier is inferred from the variable name)
+ - Interpret identifier statements as type definitions if they have a `@typedef` tag attached
