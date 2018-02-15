@@ -5405,6 +5405,31 @@ namespace ts {
             node.kind = SyntaxKind.VariableStatement;
             node.declarationList = parseVariableDeclarationList(/*inForStatementInitializer*/ false);
             parseSemicolon();
+
+            if (node.jsDoc) {
+                if (node.declarationList.declarations.length == 1 && node.declarationList.declarations[0].name.kind === SyntaxKind.Identifier) {
+                    const declaration = node.declarationList.declarations[0];
+                    if (declaration.type || declaration.initializer) {
+                        return finishNode(node);
+                    }
+                    // TODO DV: also check if there is no parent assignment expression.
+                    for (const jsDoc of node.jsDoc) {
+                        if (!jsDoc.tags) {
+                            continue;
+                        }
+                        const typedefTags = jsDoc.tags.filter(tag => isJSDocTypedefTag(tag));
+                        if (typedefTags.length !== 1) {
+                            continue;
+                        }
+                        const typedefTag = <JSDocTypedefTag>typedefTags[0];
+                        if (!typedefTag.fullName) {
+                            typedefTag.fullName = typedefTag.name = <Identifier>node.declarationList.declarations[0].name;
+                            node.declarationList.declarations = createNodeArray([], 0);
+                        }
+                    }
+                }
+            }
+
             return finishNode(node);
         }
 
@@ -6748,7 +6773,7 @@ namespace ts {
                     const typedefTag = <JSDocTypedefTag>createNode(SyntaxKind.JSDocTypedefTag, atToken.pos);
                     typedefTag.atToken = atToken;
                     typedefTag.tagName = tagName;
-                    typedefTag.fullName = parseJSDocTypeNameWithNamespace(/*flags*/ 0);
+                    typedefTag.fullName = tryParseJSDocTypeNameWithNamespace(/*flags*/ 0);
                     if (typedefTag.fullName) {
                         let rightNode = typedefTag.fullName;
                         while (true) {
@@ -6797,15 +6822,15 @@ namespace ts {
 
                     return finishNode(typedefTag);
 
-                    function parseJSDocTypeNameWithNamespace(flags: NodeFlags) {
+                    function tryParseJSDocTypeNameWithNamespace(flags: NodeFlags) {
                         const pos = scanner.getTokenPos();
-                        const typeNameOrNamespaceName = parseJSDocIdentifierName();
+                        const typeNameOrNamespaceName = tryParseJSDocIdentifierName();
 
                         if (typeNameOrNamespaceName && parseOptional(SyntaxKind.DotToken)) {
                             const jsDocNamespaceNode = <JSDocNamespaceDeclaration>createNode(SyntaxKind.ModuleDeclaration, pos);
                             jsDocNamespaceNode.flags |= flags;
                             jsDocNamespaceNode.name = typeNameOrNamespaceName;
-                            jsDocNamespaceNode.body = parseJSDocTypeNameWithNamespace(NodeFlags.NestedNamespace);
+                            jsDocNamespaceNode.body = tryParseJSDocTypeNameWithNamespace(NodeFlags.NestedNamespace);
                             return finishNode(jsDocNamespaceNode);
                         }
 
@@ -6983,6 +7008,20 @@ namespace ts {
                             parseErrorAtCurrentToken(Diagnostics.Identifier_expected);
                             return undefined;
                         }
+                    }
+
+                    const pos = scanner.getTokenPos();
+                    const end = scanner.getTextPos();
+                    const result = <Identifier>createNode(SyntaxKind.Identifier, pos);
+                    result.escapedText = escapeLeadingUnderscores(content.substring(pos, end));
+                    finishNode(result, end);
+
+                    nextJSDocToken();
+                    return result;
+                }
+                function tryParseJSDocIdentifierName(): Identifier | undefined {
+                    if (!tokenIsIdentifierOrKeyword(token())) {
+                        return;
                     }
 
                     const pos = scanner.getTokenPos();

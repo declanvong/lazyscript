@@ -22004,7 +22004,7 @@ namespace ts {
 
         function checkVariableStatement(node: VariableStatement) {
             // Grammar checking
-            if (!checkGrammarDecoratorsAndModifiers(node) && !checkGrammarVariableDeclarationList(node.declarationList)) checkGrammarForDisallowedLetOrConstStatement(node);
+            if (!checkGrammarDecoratorsAndModifiers(node) && !checkGrammarVariableDeclarationList(node.declarationList, node)) checkGrammarForDisallowedLetOrConstStatement(node);
             forEach(node.declarationList.declarations, checkSourceElement);
         }
 
@@ -26795,12 +26795,27 @@ namespace ts {
             }
         }
 
-        function checkGrammarVariableDeclarationList(declarationList: VariableDeclarationList): boolean {
+        function checkGrammarVariableDeclarationList(declarationList: VariableDeclarationList, node?: VariableStatement): boolean {
             const declarations = declarationList.declarations;
             if (checkGrammarForDisallowedTrailingComma(declarationList.declarations)) {
                 return true;
             }
 
+            if (declarationList.declarations.length === 0 && node && node.jsDoc) {
+                for (const jsDoc of node.jsDoc) {
+                    if (!jsDoc.tags) {
+                        continue;
+                    }
+                    const typedefTags = jsDoc.tags.filter(tag => isJSDocTypedefTag(tag));
+                    if (typedefTags.length !== 1) {
+                        continue;
+                    }
+                    const typedefTag = <JSDocTypedefTag>typedefTags[0];
+                    if (typedefTag.fullName) {
+                        return true;
+                    }
+                }
+            }
             if (!declarationList.declarations.length) {
                 return grammarErrorAtPos(declarationList, declarations.pos, declarations.end - declarations.pos, Diagnostics.Variable_declaration_list_cannot_be_empty);
             }
