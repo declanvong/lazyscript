@@ -5423,7 +5423,11 @@ namespace ts {
                         }
                         const typedefTag = <JSDocTypedefTag>typedefTags[0];
                         if (!typedefTag.fullName) {
-                            typedefTag.fullName = typedefTag.name = <Identifier>node.declarationList.declarations[0].name;
+                            const identifier = <Identifier>node.declarationList.declarations[0].name;
+                            if (node.modifiers && node.modifiers.length == 1 && node.modifiers[0].kind === SyntaxKind.ExportKeyword) {
+                                typedefTag.modifiers = node.modifiers;
+                            }
+                            typedefTag.fullName = typedefTag.name = identifier;
                             node.declarationList.declarations = createNodeArray([], 0);
                         }
                     }
