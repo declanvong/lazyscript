@@ -5682,7 +5682,7 @@ namespace ts {
         }
 
         function applyJSDocTypeParameters(node: ClassLikeDeclaration): NodeArray<TypeParameterDeclaration> | undefined {
-            if (node.jsDoc) {
+            if (!node.jsDoc) {
                 return undefined;
             }
             for (const jsDoc of node.jsDoc) {
