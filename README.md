@@ -8,5 +8,5 @@
 ## Todo
  - Mark JSDoc types that have type `(?T|undefined)` as optional parameters (or mark as warning only)
  - Allow `@return` statements on constructors (or mark as warning only)
- - Allow empty bodies with no return statements in classes marked as interfaces
+ - Add support for the `@interface` tag
  - Interpret identifier statements as type definitions if they have a `@typedef` tag attached
