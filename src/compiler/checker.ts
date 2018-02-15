@@ -26897,7 +26897,10 @@ namespace ts {
         function checkGrammarConstructorTypeAnnotation(node: ConstructorDeclaration) {
             const type = getEffectiveReturnTypeNode(node);
             if (type) {
-                return grammarErrorOnNode(type, Diagnostics.Type_annotation_cannot_appear_on_a_constructor_declaration);
+                const classType = tryGetDeclaredTypeOfSymbol(node.parent && node.parent.symbol);
+                if (getTypeFromTypeNode(type) != classType) {
+                    return grammarErrorOnNode(type, Diagnostics.Type_annotation_cannot_appear_on_a_constructor_declaration);
+                }
             }
         }
 
