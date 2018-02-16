@@ -2534,6 +2534,11 @@ namespace ts {
             else {
                 node.kind = SyntaxKind.PropertySignature;
                 node.type = parseTypeAnnotation();
+
+                if (node.type && node.type.kind === SyntaxKind.JSDocOptionalType && !node.questionToken) {
+                    node.questionToken = finishNode(<QuestionToken>createNode(SyntaxKind.QuestionToken));
+                }
+
                 if (token() === SyntaxKind.EqualsToken) {
                     // Although type literal properties cannot not have initializers, we attempt
                     // to parse an initializer so we can report in the checker that an interface
@@ -2801,11 +2806,27 @@ namespace ts {
 
         function parsePostfixTypeOrHigher(): TypeNode {
             let type = parseNonArrayType();
+
+            if (type.kind === SyntaxKind.ParenthesizedType) {
+                const pType =  type as ParenthesizedTypeNode;
+                if (pType.type.kind === SyntaxKind.JSDocNullableType) {
+                    const nType = pType.type as JSDocNullableType;
+                    if (nType.type.kind === SyntaxKind.UnionType) {
+                        const uType = nType.type as UnionTypeNode;
+                        if (uType.types.length == 2 && (uType.types[0].kind === SyntaxKind.UndefinedKeyword || uType.types[1].kind === SyntaxKind.UndefinedKeyword)) {
+                            const optional = createNode(SyntaxKind.JSDocOptionalType, type.pos) as JSDocOptionalType;
+                            optional.type = type;
+                            type = finishNode(optional);
+                        }
+                    }
+                }
+            }
+
             while (!scanner.hasPrecedingLineBreak()) {
                 switch (token()) {
                     case SyntaxKind.EqualsToken:
                         // only parse postfix = inside jsdoc, because it's ambiguous elsewhere
-                        if (!(contextFlags & NodeFlags.JSDoc)) {
+                        if (!(contextFlags & NodeFlags.JSDoc) || type.kind === SyntaxKind.JSDocOptionalType) {
                             return type;
                         }
                         type = createJSDocPostfixType(SyntaxKind.JSDocOptionalType, type);
@@ -5412,7 +5433,6 @@ namespace ts {
                     if (declaration.type || declaration.initializer) {
                         return finishNode(node);
                     }
-                    // TODO DV: also check if there is no parent assignment expression.
                     for (const jsDoc of node.jsDoc) {
                         if (!jsDoc.tags) {
                             continue;
