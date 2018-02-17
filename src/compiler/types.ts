@@ -495,6 +495,8 @@ namespace ts {
         /* @internal */ Ambient =         1 << 21, // If node was inside an ambient context -- a declaration file, or inside something with the `declare` modifier.
         /* @internal */ InWithStatement = 1 << 22, // If any ancestor of node was the `statement` of a WithStatement (not the `expression`)
 
+        Hacked = 1 << 23,
+
         BlockScoped = Let | Const,
 
         ReachabilityCheckFlags = HasImplicitReturn | HasExplicitReturn,

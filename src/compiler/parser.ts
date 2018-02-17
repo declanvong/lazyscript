@@ -5215,7 +5215,44 @@ namespace ts {
                     }
                     break;
             }
-            return parseExpressionOrLabeledStatement();
+            const exp = parseExpressionOrLabeledStatement();
+            if (isExpressionStatement(exp)) {
+                if (isPropertyAccessExpression((exp as ExpressionStatement).expression)) {
+                    const accessExp = exp.expression as PropertyAccessExpression;
+                    if (accessExp.expression.kind === SyntaxKind.Identifier) {
+                        if (!exp.jsDoc) {
+                            return exp;
+                        }
+                        const jsDocs = exp.jsDoc.filter(jsDoc => jsDoc.tags.some(tag => isJSDocTypedefTag(tag)));
+                        for (const jsDoc of jsDocs) {
+                            const typedefTags = jsDoc.tags.filter(tag => isJSDocTypedefTag(tag));
+                            if (typedefTags.length) {
+                                const typedefTag = typedefTags[0] as JSDocTypedefTag;
+                                const type = (typedefTag.typeExpression as JSDocTypeExpression).type;
+                                return createExportedNamespaceJSDocTypedef(accessExp.expression as Identifier, accessExp.name, type);
+                            }
+                        }
+                    }
+                }
+            }
+            return exp;
+        }
+
+        function createExportedNamespaceJSDocTypedef(namespace: Identifier, typeIdentifier: Identifier, type: TypeNode): ModuleDeclaration {
+            const node = <ModuleDeclaration>createNode(SyntaxKind.ModuleDeclaration);
+            node.modifiers = createNodeArray([<Modifier>createNode(SyntaxKind.ExportKeyword, 0)], 0);
+            node.flags = NodeFlags.Namespace;
+            node.flags |= NodeFlags.Hacked;
+            node.name = namespace;
+            node.body = <ModuleBlock>createNode(SyntaxKind.ModuleBlock);
+
+            const typeAlias = <TypeAliasDeclaration>createNode(SyntaxKind.TypeAliasDeclaration);
+            typeAlias.modifiers = createNodeArray([<Modifier>createNode(SyntaxKind.ExportKeyword, 0)], 0);
+            typeAlias.name = typeIdentifier;
+            typeAlias.type = type;
+            typeAlias.flags |= NodeFlags.Hacked;
+            node.body.statements = createNodeArray([typeAlias], 0);
+            return node;
         }
 
         function isDeclareModifier(modifier: Modifier) {
@@ -5422,37 +5459,50 @@ namespace ts {
             return nextTokenIsIdentifier() && nextToken() === SyntaxKind.CloseParenToken;
         }
 
-        function parseVariableStatement(node: VariableStatement): VariableStatement {
-            node.kind = SyntaxKind.VariableStatement;
-            node.declarationList = parseVariableDeclarationList(/*inForStatementInitializer*/ false);
-            parseSemicolon();
+        function attachIdentifierToJSDocTypedef(jsDocs: JSDoc[], identifier: Identifier, modifiers?: ModifiersArray) {
+            for (const jsDoc of jsDocs) {
+                if (!jsDoc.tags) {
+                    continue;
+                }
+                const typedefTags = jsDoc.tags.filter(tag => isJSDocTypedefTag(tag));
+                if (typedefTags.length !== 1) {
+                    continue;
+                }
+                const typedefTag = <JSDocTypedefTag>typedefTags[0];
+                if (!typedefTag.fullName) {
+                    if (modifiers) {
+                        typedefTag.modifiers = modifiers;
+                    }
+                    typedefTag.fullName = typedefTag.name = identifier;
+                }
+            }
+        }
 
+        function tryAttachJSDocTypedefToVariableStatement(node: VariableStatement) {
             if (node.jsDoc) {
                 if (node.declarationList.declarations.length == 1 && node.declarationList.declarations[0].name.kind === SyntaxKind.Identifier) {
                     const declaration = node.declarationList.declarations[0];
                     if (declaration.type || declaration.initializer) {
                         return finishNode(node);
                     }
-                    for (const jsDoc of node.jsDoc) {
-                        if (!jsDoc.tags) {
-                            continue;
-                        }
-                        const typedefTags = jsDoc.tags.filter(tag => isJSDocTypedefTag(tag));
-                        if (typedefTags.length !== 1) {
-                            continue;
-                        }
-                        const typedefTag = <JSDocTypedefTag>typedefTags[0];
-                        if (!typedefTag.fullName) {
-                            const identifier = <Identifier>node.declarationList.declarations[0].name;
-                            if (node.modifiers && node.modifiers.length == 1 && node.modifiers[0].kind === SyntaxKind.ExportKeyword) {
-                                typedefTag.modifiers = node.modifiers;
-                            }
-                            typedefTag.fullName = typedefTag.name = identifier;
-                            node.declarationList.declarations = createNodeArray([], 0);
-                        }
+
+                    let modifiers;
+                    if (node.modifiers && node.modifiers.length == 1 && node.modifiers[0].kind === SyntaxKind.ExportKeyword) {
+                        modifiers = node.modifiers;
                     }
+                    const identifier = <Identifier>node.declarationList.declarations[0].name;
+                    attachIdentifierToJSDocTypedef(node.jsDoc, identifier, modifiers);
+                    node.declarationList.declarations = createNodeArray([], 0);
                 }
             }
+        }
+
+        function parseVariableStatement(node: VariableStatement): VariableStatement {
+            node.kind = SyntaxKind.VariableStatement;
+            node.declarationList = parseVariableDeclarationList(/*inForStatementInitializer*/ false);
+            parseSemicolon();
+
+            tryAttachJSDocTypedefToVariableStatement(node);
 
             return finishNode(node);
         }

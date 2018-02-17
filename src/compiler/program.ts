@@ -1378,10 +1378,14 @@ namespace ts {
                             }
                             break;
                         case SyntaxKind.ModuleDeclaration:
-                            diagnostics.push(createDiagnosticForNode(node, Diagnostics.module_declarations_can_only_be_used_in_a_ts_file));
+                            if (!(node.flags & NodeFlags.Hacked)) {
+                                diagnostics.push(createDiagnosticForNode(node, Diagnostics.module_declarations_can_only_be_used_in_a_ts_file));
+                            }
                             return;
                         case SyntaxKind.TypeAliasDeclaration:
-                            diagnostics.push(createDiagnosticForNode(node, Diagnostics.type_aliases_can_only_be_used_in_a_ts_file));
+                            if (!(node.flags & NodeFlags.Hacked)) {
+                                diagnostics.push(createDiagnosticForNode(node, Diagnostics.type_aliases_can_only_be_used_in_a_ts_file));
+                            }
                             return;
                         case SyntaxKind.EnumDeclaration:
                             diagnostics.push(createDiagnosticForNode(node, Diagnostics.enum_declarations_can_only_be_used_in_a_ts_file));
