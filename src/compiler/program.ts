@@ -1377,16 +1377,6 @@ namespace ts {
                                 return;
                             }
                             break;
-                        case SyntaxKind.HeritageClause:
-                            const heritageClause = <HeritageClause>node;
-                            if (heritageClause.token === SyntaxKind.ImplementsKeyword) {
-                                diagnostics.push(createDiagnosticForNode(node, Diagnostics.implements_clauses_can_only_be_used_in_a_ts_file));
-                                return;
-                            }
-                            break;
-                        case SyntaxKind.InterfaceDeclaration:
-                            diagnostics.push(createDiagnosticForNode(node, Diagnostics.interface_declarations_can_only_be_used_in_a_ts_file));
-                            return;
                         case SyntaxKind.ModuleDeclaration:
                             diagnostics.push(createDiagnosticForNode(node, Diagnostics.module_declarations_can_only_be_used_in_a_ts_file));
                             return;
@@ -1458,9 +1448,8 @@ namespace ts {
                             break;
                         case SyntaxKind.CallExpression:
                         case SyntaxKind.NewExpression:
-                        case SyntaxKind.ExpressionWithTypeArguments:
                             // Check type arguments
-                            if (nodes === (<CallExpression | NewExpression | ExpressionWithTypeArguments>parent).typeArguments) {
+                            if (nodes === (<CallExpression | NewExpression>parent).typeArguments) {
                                 diagnostics.push(createDiagnosticForNodeArray(nodes, Diagnostics.type_arguments_can_only_be_used_in_a_ts_file));
                                 return;
                             }

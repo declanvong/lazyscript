@@ -5726,8 +5726,8 @@ namespace ts {
             return <ClassExpression>parseClassDeclarationOrExpression(<ClassLikeDeclaration>createNodeWithJSDoc(SyntaxKind.Unknown), SyntaxKind.ClassExpression);
         }
 
-        function parseClassDeclaration(node: ClassLikeDeclaration): ClassDeclaration {
-            return <ClassDeclaration>parseClassDeclarationOrExpression(node, SyntaxKind.ClassDeclaration);
+        function parseClassDeclaration(node: ClassLikeDeclaration): ClassDeclaration | InterfaceDeclaration {
+            return <ClassDeclaration | InterfaceDeclaration>parseClassDeclarationOrExpression(node, SyntaxKind.ClassDeclaration);
         }
 
         function applyJSDocTypeParameters(node: ClassLikeDeclaration): NodeArray<TypeParameterDeclaration> | undefined {
@@ -5747,7 +5747,7 @@ namespace ts {
             }
         }
 
-        function parseClassDeclarationOrExpression(node: ClassLikeDeclaration, kind: ClassLikeDeclaration["kind"]): ClassLikeDeclaration {
+        function parseClassDeclarationOrExpression(node: ClassLikeDeclaration, kind: ClassLikeDeclaration["kind"]): ClassLikeDeclaration | InterfaceDeclaration {
             node.kind = kind;
             parseExpected(SyntaxKind.ClassKeyword);
             node.name = parseNameOfClassDeclarationOrExpression();
@@ -5765,6 +5765,33 @@ namespace ts {
             }
             else {
                 node.members = createMissingList<ClassElement>();
+            }
+
+            if (node.jsDoc) {
+                for (const jsDoc of node.jsDoc) {
+                    if (jsDoc.tags) {
+                        if (jsDoc.tags.some(tag => isJSDocInterfaceTag(tag))) {
+                            const interfaceNode = node as DeclarationStatement as InterfaceDeclaration;
+                            interfaceNode.kind = SyntaxKind.InterfaceDeclaration;
+                            return finishNode(interfaceNode);
+                        }
+                        const implementsTags = jsDoc.tags.filter(tag => isJSDocImplementsTag(tag));
+                        if (implementsTags.length) {
+                            const heritageNode = <HeritageClause>createNode(SyntaxKind.HeritageClause);
+                            heritageNode.token = SyntaxKind.ImplementsKeyword;
+                            
+                            heritageNode.types = createNodeArray(implementsTags.map(tag => {
+                                const typeRef = ((tag as JSDocImplementsTag).typeExpression.type) as TypeReferenceNode;
+                                const expTypeArgs = <ExpressionWithTypeArguments>createNode(SyntaxKind.ExpressionWithTypeArguments);
+                                expTypeArgs.expression = typeRef.typeName as LeftHandSideExpression;
+                                expTypeArgs.typeArguments = typeRef.typeArguments;
+                                return finishNode(expTypeArgs);
+                            }), implementsTags[0].pos);
+
+                            node.heritageClauses = createNodeArray([heritageNode], heritageNode.pos);
+                        }
+                    }
+                }
             }
 
             return finishNode(node);
@@ -6546,6 +6573,12 @@ namespace ts {
                             case "typedef":
                                 tag = parseTypedefTag(atToken, tagName);
                                 break;
+                            case "interface":
+                                tag = parseInterfaceTag(atToken, tagName);
+                                break;
+                            case "implements":
+                                tag = parseImplementsTag(atToken, tagName);
+                                break;
                             default:
                                 tag = parseUnknownTag(atToken, tagName);
                                 break;
@@ -6787,6 +6820,21 @@ namespace ts {
                     const tag = <JSDocClassTag>createNode(SyntaxKind.JSDocClassTag, atToken.pos);
                     tag.atToken = atToken;
                     tag.tagName = tagName;
+                    return finishNode(tag);
+                }
+
+                function parseInterfaceTag(atToken: AtToken, tagName: Identifier): JSDocInterfaceTag {
+                    const tag = <JSDocInterfaceTag>createNode(SyntaxKind.JSDocInterfaceTag, atToken.pos);
+                    tag.atToken = atToken;
+                    tag.tagName = tagName;
+                    return finishNode(tag);
+                }
+
+                function parseImplementsTag(atToken: AtToken, tagName: Identifier): JSDocImplementsTag {
+                    const tag = <JSDocImplementsTag>createNode(SyntaxKind.JSDocImplementsTag, atToken.pos);
+                    tag.atToken = atToken;
+                    tag.tagName = tagName;
+                    tag.typeExpression = parseJSDocTypeExpression(/*mayOmitBraces*/ true);
                     return finishNode(tag);
                 }
 

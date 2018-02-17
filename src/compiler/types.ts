@@ -403,6 +403,8 @@ namespace ts {
         JSDocTag,
         JSDocAugmentsTag,
         JSDocClassTag,
+        JSDocInterfaceTag,
+        JSDocImplementsTag,
         JSDocParameterTag,
         JSDocReturnTag,
         JSDocTypeTag,
@@ -2317,6 +2319,15 @@ namespace ts {
 
     export interface JSDocClassTag extends JSDocTag {
         kind: SyntaxKind.JSDocClassTag;
+    }
+
+    export interface JSDocInterfaceTag extends JSDocTag {
+        kind: SyntaxKind.JSDocInterfaceTag;
+    }
+
+    export interface JSDocImplementsTag extends JSDocTag {
+        kind: SyntaxKind.JSDocImplementsTag;
+        typeExpression: JSDocTypeExpression;
     }
 
     export interface JSDocTemplateTag extends JSDocTag {

@@ -5108,6 +5108,14 @@ namespace ts {
         return node.kind === SyntaxKind.JSDocTypeTag;
     }
 
+    export function isJSDocInterfaceTag(node: Node): node is JSDocInterfaceTag {
+        return node.kind === SyntaxKind.JSDocInterfaceTag;
+    }
+
+    export function isJSDocImplementsTag(node: Node): node is JSDocImplementsTag {
+        return node.kind === SyntaxKind.JSDocImplementsTag;
+    }
+
     export function isJSDocTemplateTag(node: Node): node is JSDocTemplateTag {
         return node.kind === SyntaxKind.JSDocTemplateTag;
     }

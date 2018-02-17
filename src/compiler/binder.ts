@@ -2972,7 +2972,8 @@ namespace ts {
 
             case SyntaxKind.ImplementsKeyword:
                 // An `implements` HeritageClause is TypeScript syntax.
-                transformFlags |= TransformFlags.AssertTypeScript;
+                // NOT ANYMORE
+                transformFlags |= TransformFlags.AssertES2015;
                 break;
 
             default:
