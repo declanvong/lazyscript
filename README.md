@@ -1,3 +1,11 @@
+## Instructions
+1. Clone this somewhere
+2. Install gulp if you don't have it already (`npm install -g gulp`)
+3. Compile the compiler with `gulp local`
+4. Point VSCode to this build of tsc by adding `"typescript.tsdk": "<cloned directory>/built/local"` to your VSCode user settings (or workspace settings)
+5. Make sure you have a `tsconfig.json` for your source directory
+6. Restart VSCode or relaunch the TSServer by running `CMD+Shift+P` => `TypeScript: Restart TS Server`
+
 ## Additional functionality
  - Added support for `.es6` file extensions as JS
  - Import paths that begin with leading slashes are interpreted as from the project root, not the disk root
