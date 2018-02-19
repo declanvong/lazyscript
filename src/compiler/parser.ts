@@ -467,6 +467,8 @@ namespace ts {
                 return visitNode(cbNode, (<JSDocTypeTag>node).typeExpression);
             case SyntaxKind.JSDocAugmentsTag:
                 return visitNode(cbNode, (<JSDocAugmentsTag>node).class);
+            case SyntaxKind.JSDocImplementsTag:
+                return visitNode(cbNode, (<JSDocImplementsTag>node).interface);
             case SyntaxKind.JSDocTemplateTag:
                 return visitNodes(cbNode, cbNodes, (<JSDocTemplateTag>node).typeParameters);
             case SyntaxKind.JSDocTypedefTag:
@@ -5505,8 +5507,8 @@ namespace ts {
                         return;
                     }
 
-                    const enumDeclNode = <EnumDeclaration>createNode(SyntaxKind.EnumDeclaration, node.pos);
-                    enumDeclNode.symbol = node.symbol;
+                    const enumDeclNode = <EnumDeclaration>createNode(SyntaxKind.EnumDeclaration, declaration.pos);
+                    enumDeclNode.end = declaration.end;
                     enumDeclNode.name = <Identifier>declaration.name;
                     enumDeclNode.modifiers = createNodeArray([<Modifier>createNode(SyntaxKind.ExportKeyword, 0)], 0);
                     const properties = (declaration.initializer as ObjectLiteralExpression).properties;
@@ -5516,10 +5518,10 @@ namespace ts {
                     enumDeclNode.members = createNodeArray(properties.map(prop => {
                         const propAssign = prop as PropertyAssignment;
                         const enumMemberNode = <EnumMember>createNode(SyntaxKind.EnumMember, prop.pos);
+                        enumMemberNode.end = prop.end;
                         enumMemberNode.kind = SyntaxKind.EnumMember;
                         enumMemberNode.name = prop.name;
                         enumMemberNode.initializer = propAssign.initializer;
-                        enumMemberNode.symbol = prop.symbol;
                         return enumMemberNode;
                     }), 0);
                     enumDeclNode.flags |= NodeFlags.Hacked;
@@ -5854,22 +5856,25 @@ namespace ts {
                         if (jsDoc.tags.some(tag => isJSDocInterfaceTag(tag))) {
                             const interfaceNode = node as DeclarationStatement as InterfaceDeclaration;
                             interfaceNode.kind = SyntaxKind.InterfaceDeclaration;
+                            interfaceNode.members.forEach(member => {
+                                member.kind = SyntaxKind.MethodSignature;
+                            });
                             return finishNode(interfaceNode);
                         }
                         const implementsTags = jsDoc.tags.filter(tag => isJSDocImplementsTag(tag));
                         if (implementsTags.length) {
-                            const heritageNode = <HeritageClause>createNode(SyntaxKind.HeritageClause);
+                            const heritageNode = <HeritageClause>createNode(SyntaxKind.HeritageClause, implementsTags[0].pos);
                             heritageNode.token = SyntaxKind.ImplementsKeyword;
-                            
+
                             heritageNode.types = createNodeArray(implementsTags.map(tag => {
-                                const typeRef = ((tag as JSDocImplementsTag).typeExpression.type) as TypeReferenceNode;
-                                const expTypeArgs = <ExpressionWithTypeArguments>createNode(SyntaxKind.ExpressionWithTypeArguments);
-                                expTypeArgs.expression = typeRef.typeName as LeftHandSideExpression;
+                                const typeRef = (tag as JSDocImplementsTag).interface;
+                                const expTypeArgs = <ExpressionWithTypeArguments>createNode(SyntaxKind.ExpressionWithTypeArguments, (tag as JSDocImplementsTag).interface.pos);
+                                expTypeArgs.expression = typeRef.expression as LeftHandSideExpression;
                                 expTypeArgs.typeArguments = typeRef.typeArguments;
                                 return finishNode(expTypeArgs);
                             }), implementsTags[0].pos);
 
-                            node.heritageClauses = createNodeArray([heritageNode], heritageNode.pos);
+                            node.heritageClauses = createNodeArray([heritageNode], heritageNode.pos, implementsTags[0].end);
                         }
                     }
                 }
@@ -6915,7 +6920,7 @@ namespace ts {
                     const tag = <JSDocImplementsTag>createNode(SyntaxKind.JSDocImplementsTag, atToken.pos);
                     tag.atToken = atToken;
                     tag.tagName = tagName;
-                    tag.typeExpression = parseJSDocTypeExpression(/*mayOmitBraces*/ true);
+                    tag.interface = parseExpressionWithTypeArgumentsForAugments();
                     return finishNode(tag);
                 }
 

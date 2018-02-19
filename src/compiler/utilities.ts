@@ -4373,6 +4373,10 @@ namespace ts {
         return getFirstJSDocTag(node, SyntaxKind.JSDocAugmentsTag) as JSDocAugmentsTag;
     }
 
+    export function getJSDocImplementsTag(node: Node): JSDocImplementsTag | undefined {
+        return getFirstJSDocTag(node, SyntaxKind.JSDocImplementsTag) as JSDocImplementsTag;
+    }
+
     /** Gets the JSDoc class tag for the node if present */
     export function getJSDocClassTag(node: Node): JSDocClassTag | undefined {
         return getFirstJSDocTag(node, SyntaxKind.JSDocClassTag) as JSDocClassTag;

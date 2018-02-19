@@ -2329,7 +2329,7 @@ namespace ts {
 
     export interface JSDocImplementsTag extends JSDocTag {
         kind: SyntaxKind.JSDocImplementsTag;
-        typeExpression: JSDocTypeExpression;
+        interface: ExpressionWithTypeArguments & { expression: Identifier | PropertyAccessEntityNameExpression };
     }
 
     export interface JSDocTemplateTag extends JSDocTag {
