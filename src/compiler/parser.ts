@@ -5483,7 +5483,7 @@ namespace ts {
                 if (node.declarationList.declarations.length == 1 && node.declarationList.declarations[0].name.kind === SyntaxKind.Identifier) {
                     const declaration = node.declarationList.declarations[0];
                     if (declaration.type || declaration.initializer) {
-                        return finishNode(node);
+                        return;
                     }
 
                     let modifiers;
@@ -5497,14 +5497,45 @@ namespace ts {
             }
         }
 
-        function parseVariableStatement(node: VariableStatement): VariableStatement {
+        function tryParseVariableStatementAsJSDocEnum(node: VariableStatement): EnumDeclaration | undefined {
+            if (node.jsDoc) {
+                if (node.declarationList.declarations.length == 1 && node.declarationList.declarations[0].name.kind === SyntaxKind.Identifier) {
+                    const declaration = node.declarationList.declarations[0];
+                    if (declaration.type || !declaration.initializer || declaration.initializer.kind !== SyntaxKind.ObjectLiteralExpression) {
+                        return;
+                    }
+
+                    const enumDeclNode = <EnumDeclaration>createNode(SyntaxKind.EnumDeclaration, node.pos);
+                    enumDeclNode.symbol = node.symbol;
+                    enumDeclNode.name = <Identifier>declaration.name;
+                    enumDeclNode.modifiers = createNodeArray([<Modifier>createNode(SyntaxKind.ExportKeyword, 0)], 0);
+                    const properties = (declaration.initializer as ObjectLiteralExpression).properties;
+                    if (properties.some(prop => prop.kind !== SyntaxKind.PropertyAssignment)) {
+                        return;
+                    }
+                    enumDeclNode.members = createNodeArray(properties.map(prop => {
+                        const propAssign = prop as PropertyAssignment;
+                        const enumMemberNode = <EnumMember>createNode(SyntaxKind.EnumMember, prop.pos);
+                        enumMemberNode.kind = SyntaxKind.EnumMember;
+                        enumMemberNode.name = prop.name;
+                        enumMemberNode.initializer = propAssign.initializer;
+                        enumMemberNode.symbol = prop.symbol;
+                        return enumMemberNode;
+                    }), 0);
+                    enumDeclNode.flags |= NodeFlags.Hacked;
+                    return finishNode(enumDeclNode);
+                }
+            }
+        }
+
+        function parseVariableStatement(node: VariableStatement): VariableStatement | EnumDeclaration {
             node.kind = SyntaxKind.VariableStatement;
             node.declarationList = parseVariableDeclarationList(/*inForStatementInitializer*/ false);
             parseSemicolon();
 
             tryAttachJSDocTypedefToVariableStatement(node);
 
-            return finishNode(node);
+            return tryParseVariableStatementAsJSDocEnum(node) || finishNode(node);
         }
 
         function parseFunctionDeclaration(node: FunctionDeclaration): FunctionDeclaration {

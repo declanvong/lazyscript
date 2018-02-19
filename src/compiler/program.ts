@@ -1388,7 +1388,9 @@ namespace ts {
                             }
                             return;
                         case SyntaxKind.EnumDeclaration:
-                            diagnostics.push(createDiagnosticForNode(node, Diagnostics.enum_declarations_can_only_be_used_in_a_ts_file));
+                            if (!(node.flags & NodeFlags.Hacked)) {
+                                diagnostics.push(createDiagnosticForNode(node, Diagnostics.enum_declarations_can_only_be_used_in_a_ts_file));
+                            }
                             return;
                         case SyntaxKind.NonNullExpression:
                             diagnostics.push(createDiagnosticForNode(node, Diagnostics.non_null_assertions_can_only_be_used_in_a_ts_file));
