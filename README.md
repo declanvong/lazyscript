@@ -8,10 +8,14 @@
  - Mark JSDoc types that have type `(?T|undefined)` as optional parameters
  - Add support for the `@interface` tag on classes
  - Interpret identifier statements as type definitions if they have a `@typedef` tag attached
+ - Add support for the `@enum` tag
   
 ## Todo
- - Add support for the `@enum` tag
- - (Bug) Fix the hover text on overridden interface methods to display the correct return type (as per the implemented interface)
+
+ - (Bug) Fix the hover text on everything in classes that implement interfaces
+ - (Bug) Fix the hover text on enum declarations
+ - Add support for global type definitions/externs (e.g. Map, Set, Bluebird P)
  - Add a warning if an optional parameter is not supplied
+ - Parse `(T|undefined)` as an optional parameter if `T` is a primitive
  - Change the error message to be "Constructor return type does not match containing class type" if a return tag on a constructor does not match
  - Check for the diagnostic errors I removed in program.ts and add them back again with more constrained checks against `NodeFlags.Hacked`
