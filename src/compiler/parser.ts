@@ -5237,7 +5237,7 @@ namespace ts {
                         if (!exp.jsDoc) {
                             return exp;
                         }
-                        const jsDocs = exp.jsDoc.filter(jsDoc => jsDoc.tags.some(tag => isJSDocTypedefTag(tag)));
+                        const jsDocs = exp.jsDoc.filter(jsDoc => jsDoc.tags && jsDoc.tags.some(tag => isJSDocTypedefTag(tag)));
                         for (const jsDoc of jsDocs) {
                             const typedefTags = jsDoc.tags.filter(tag => isJSDocTypedefTag(tag));
                             if (typedefTags.length) {
