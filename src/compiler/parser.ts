@@ -2806,6 +2806,21 @@ namespace ts {
             return token() === SyntaxKind.CloseParenToken || isStartOfParameter() || isStartOfType();
         }
 
+        function unionTypeHasUndefined(type: TypeNode): boolean {
+            if (type.kind !== SyntaxKind.UnionType) {
+                return false;
+            }
+
+            const uType = type as UnionTypeNode;
+            return uType.types.some(type => type.kind === SyntaxKind.UndefinedKeyword);
+        }
+
+        function createFakeJSDocOptionalType(type: TypeNode): JSDocOptionalType {
+            const optional = <JSDocOptionalType>createNode(SyntaxKind.JSDocOptionalType, type.pos);
+            optional.type = type;
+            return optional;
+        }
+
         function parsePostfixTypeOrHigher(): TypeNode {
             let type = parseNonArrayType();
 
@@ -2813,14 +2828,11 @@ namespace ts {
                 const pType =  type as ParenthesizedTypeNode;
                 if (pType.type.kind === SyntaxKind.JSDocNullableType) {
                     const nType = pType.type as JSDocNullableType;
-                    if (nType.type.kind === SyntaxKind.UnionType) {
-                        const uType = nType.type as UnionTypeNode;
-                        if (uType.types.length == 2 && (uType.types[0].kind === SyntaxKind.UndefinedKeyword || uType.types[1].kind === SyntaxKind.UndefinedKeyword)) {
-                            const optional = createNode(SyntaxKind.JSDocOptionalType, type.pos) as JSDocOptionalType;
-                            optional.type = type;
-                            type = finishNode(optional);
-                        }
+                    if (unionTypeHasUndefined(nType.type)) {
+                        type = finishNode(createFakeJSDocOptionalType(type));
                     }
+                } else if (unionTypeHasUndefined(pType.type)) {
+                    type = finishNode(createFakeJSDocOptionalType(type));
                 }
             }
 
