@@ -2821,18 +2821,23 @@ namespace ts {
             return optional;
         }
 
+        function tryConvertToJSDocOptionalType(node: ParenthesizedTypeNode | JSDocNullableType): JSDocOptionalType | undefined {
+            if (node.kind === SyntaxKind.JSDocNullableType) {
+                if (unionTypeHasUndefined(node.type)) {
+                    return finishNode(createFakeJSDocOptionalType(node));
+                }
+            } else if (unionTypeHasUndefined(node.type)) {
+                return finishNode(createFakeJSDocOptionalType(node));
+            }
+        }
+
         function parsePostfixTypeOrHigher(): TypeNode {
             let type = parseNonArrayType();
 
-            if (type.kind === SyntaxKind.ParenthesizedType) {
-                const pType =  type as ParenthesizedTypeNode;
-                if (pType.type.kind === SyntaxKind.JSDocNullableType) {
-                    const nType = pType.type as JSDocNullableType;
-                    if (unionTypeHasUndefined(nType.type)) {
-                        type = finishNode(createFakeJSDocOptionalType(type));
-                    }
-                } else if (unionTypeHasUndefined(pType.type)) {
-                    type = finishNode(createFakeJSDocOptionalType(type));
+            if (isParenthesizedTypeNode(type) || isJSDocNullableType(type)) {
+                const optionalType = tryConvertToJSDocOptionalType(type);
+                if (optionalType) {
+                    type = optionalType;
                 }
             }
 
