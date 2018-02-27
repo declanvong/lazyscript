@@ -4402,6 +4402,14 @@ namespace ts {
         return undefined;
     }
 
+    export function getJSDocTypedefTag(node: Node): JSDocTypedefTag | undefined {
+        const tag = getFirstJSDocTag(node, SyntaxKind.JSDocTypedefTag) as JSDocTypedefTag;
+        if (tag && tag.typeExpression) {
+            return tag;
+        }
+        return undefined;
+    }
+
     /**
      * Gets the type node for the node if provided via JSDoc.
      *

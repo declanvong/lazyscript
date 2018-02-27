@@ -5242,14 +5242,10 @@ namespace ts {
                         if (!exp.jsDoc) {
                             return exp;
                         }
-                        const jsDocs = exp.jsDoc.filter(jsDoc => jsDoc.tags && jsDoc.tags.some(tag => isJSDocTypedefTag(tag)));
-                        for (const jsDoc of jsDocs) {
-                            const typedefTags = jsDoc.tags.filter(tag => isJSDocTypedefTag(tag));
-                            if (typedefTags.length) {
-                                const typedefTag = typedefTags[0] as JSDocTypedefTag;
-                                const type = (typedefTag.typeExpression as JSDocTypeExpression).type;
-                                return createExportedNamespaceJSDocTypedef(accessExp.expression as Identifier, accessExp.name, type);
-                            }
+                        const typedefTag = getJSDocTypedefTag(exp);
+                        if (typedefTag) {
+                            const type = (typedefTag.typeExpression as JSDocTypeExpression).type;
+                            return createExportedNamespaceJSDocTypedef(accessExp.expression as Identifier, accessExp.name, type);
                         }
                     }
                 }
