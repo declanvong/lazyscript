@@ -278,40 +278,12 @@ namespace ts.codefix {
                     }
                 }
 
-                if (isPathRelativeToParent(relativeToBaseUrl)) {
+                if (isPathRelativeToParent(relativeToBaseUrl) || isPathRelativeToSource(relativePath)) {
                     return [relativePath];
                 }
 
-                /*
-                Prefer a relative import over a baseUrl import if it doesn't traverse up to baseUrl.
-
-                Suppose we have:
-                    baseUrl = /base
-                    sourceDirectory = /base/a/b
-                    moduleFileName = /base/foo/bar
-                Then:
-                    relativePath = ../../foo/bar
-                    getRelativePathNParents(relativePath) = 2
-                    pathFromSourceToBaseUrl = ../../
-                    getRelativePathNParents(pathFromSourceToBaseUrl) = 2
-                    2 < 2 = false
-                In this case we should prefer using the baseUrl path "/a/b" instead of the relative path "../../foo/bar".
-
-                Suppose we have:
-                    baseUrl = /base
-                    sourceDirectory = /base/foo/a
-                    moduleFileName = /base/foo/bar
-                Then:
-                    relativePath = ../a
-                    getRelativePathNParents(relativePath) = 1
-                    pathFromSourceToBaseUrl = ../../
-                    getRelativePathNParents(pathFromSourceToBaseUrl) = 2
-                    1 < 2 = true
-                In this case we should prefer using the relative path "../a" instead of the baseUrl path "foo/a".
-                */
-                const pathFromSourceToBaseUrl = getRelativePath(baseUrl, sourceDirectory, getCanonicalFileName);
-                const relativeFirst = getRelativePathNParents(relativePath) < getRelativePathNParents(pathFromSourceToBaseUrl);
-                return relativeFirst ? [relativePath, importRelativeToBaseUrl] : [importRelativeToBaseUrl, relativePath];
+                // Fallback to using the url relative to the baseUrl
+                return [importRelativeToBaseUrl];
             });
             return modulePathsGroups.map(group => group.map(moduleSpecifier => ({ moduleSpecifier, importKind })));
         });
@@ -328,14 +300,6 @@ namespace ts.codefix {
             sf.resolvedModules && firstDefinedIterator(sf.resolvedModules.values(), res =>
                 res && res.resolvedFileName === fileName ? res.originalPath : undefined));
         return symlinks.length === 0 ? [fileName] : symlinks;
-    }
-
-    function getRelativePathNParents(relativePath: string): number {
-        let count = 0;
-        for (let i = 0; i + 3 <= relativePath.length && relativePath.slice(i, i + 3) === "../"; i += 3) {
-            count++;
-        }
-        return count;
     }
 
     function tryGetModuleNameFromAmbientModule(moduleSymbol: Symbol): string | undefined {
@@ -541,6 +505,10 @@ namespace ts.codefix {
     function getRelativePathIfInDirectory(path: string, directoryPath: string, getCanonicalFileName: GetCanonicalFileName): string | undefined {
         const relativePath = getRelativePathToDirectoryOrUrl(directoryPath, path, directoryPath, getCanonicalFileName, /*isAbsolutePathAnUrl*/ false);
         return isRootedDiskPath(relativePath) ? undefined : relativePath;
+    }
+
+    function isPathRelativeToSource(path: string): boolean {
+        return startsWith(path, "./");
     }
 
     function isPathRelativeToParent(path: string): boolean {
