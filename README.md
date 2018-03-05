@@ -21,6 +21,7 @@
 ## Todo
 
  - (Bug) Fix the hover text on enum declarations
+ - Support for namespaced enum declarations, e.g. `SomeClass.EnumName` should emit `SomeClass` as a namespace declaration.
  - Add a warning if an optional parameter is not supplied
  - Change the error message to be "Constructor return type does not match containing class type" if a return tag on a constructor does not match
  - Check for the diagnostic errors I removed in program.ts and add them back again with more constrained checks against `NodeFlags.Hacked`
